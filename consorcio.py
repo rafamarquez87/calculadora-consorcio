@@ -1,5 +1,7 @@
 import streamlit as st
+import pandas as pd
 
+# ---------------- Classe de Consórcio ----------------
 class Consorcio:
     def __init__(self, valor_credito, prazo_meses, taxa_adm_anual, fundo_reserva=0.0, seguro=0.0):
         self.valor_credito = valor_credito
@@ -52,38 +54,55 @@ class Consorcio:
             }
 
 
-# ---------------- Interface Web com Streamlit ----------------
+# ---------------- Interface Web ----------------
 st.set_page_config(page_title="Calculadora de Consórcio", page_icon="💰", layout="centered")
 st.title("📊 Calculadora de Consórcio")
 
-# Entradas
-valor_credito = st.number_input("Valor da Carta de Crédito (R$):", min_value=1000.0, step=1000.0)
-prazo = st.number_input("Prazo (meses):", min_value=1, step=1)
-taxa = st.number_input("Taxa de Administração (% ao ano):", min_value=0.0, step=0.1)
-fundo = st.number_input("Fundo de Reserva (% do crédito):", min_value=0.0, step=0.1)
-seguro = st.number_input("Seguro Mensal (R$):", min_value=0.0, step=1.0)
+# Layout dos inputs
+col1, col2 = st.columns(2)
 
-if st.button("Calcular Consórcio"):
+with col1:
+    valor_credito = st.number_input("Valor da Carta de Crédito (R$):", min_value=1000.0, step=1000.0, format="%.2f")
+    prazo = st.slider("Prazo (meses):", min_value=12, max_value=240, step=12, value=60)
+    taxa = st.number_input("Taxa de Administração (% ao ano):", min_value=0.0, step=0.1, format="%.2f")
+
+with col2:
+    fundo = st.slider("Fundo de Reserva (% do crédito):", min_value=0.0, max_value=10.0, step=0.1, value=0.0)
+    seguro = st.number_input("Seguro Mensal (R$):", min_value=0.0, step=10.0, format="%.2f")
+
+if st.button("📌 Calcular Consórcio"):
     consorcio = Consorcio(valor_credito, prazo, taxa, fundo, seguro)
     resultado = consorcio.calcular()
 
-    st.subheader("📋 Resumo")
-    st.write(f"**Taxa de Administração Total:** R$ {resultado['taxa_total']:.2f}")
-    st.write(f"**Fundo de Reserva Total:** R$ {resultado['fundo_total']:.2f}")
-    st.write(f"**Parcela Mensal:** R$ {resultado['parcela']:.2f}")
-    st.write(f"**Custo Total do Consórcio:** R$ {resultado['custo_total']:.2f}")
+    # ---------------- Abas ----------------
+    tab1, tab2, tab3 = st.tabs(["📋 Resumo", "📑 Parcelas", "💰 Lance"])
 
-    st.subheader("📑 Simulação de Parcelas")
-    st.dataframe({"Nº Parcela": list(range(1, prazo+1)), "Valor (R$)": resultado["parcelas"]})
+    # Resumo
+    with tab1:
+        colr1, colr2 = st.columns(2)
+        with colr1:
+            st.metric("Parcela Mensal", f"R$ {resultado['parcela']:.2f}")
+            st.metric("Taxa de Administração Total", f"R$ {resultado['taxa_total']:.2f}")
+        with colr2:
+            st.metric("Custo Total do Consórcio", f"R$ {resultado['custo_total']:.2f}")
+            st.metric("Fundo de Reserva Total", f"R$ {resultado['fundo_total']:.2f}")
 
-    # Simulação de lance
-    st.subheader("💰 Simulação de Lance")
-    lance_valor = st.number_input("Lance ofertado (R$):", min_value=0.0, step=500.0)
-    tipo = st.radio("Tipo de abatimento:", ["Prazo", "Parcela"])
+    # Parcelas
+    with tab2:
+        df = pd.DataFrame({
+            "Nº Parcela": list(range(1, prazo+1)),
+            "Valor (R$)": resultado["parcelas"]
+        })
+        st.dataframe(df, use_container_width=True)
 
-    if lance_valor > 0:
-        resultado_lance = consorcio.simular_lance(lance_valor, resultado, tipo.lower())
-        st.success(f"**Simulação ({resultado_lance['tipo']})**")
-        st.write(f"**Nova Parcela:** R$ {resultado_lance['nova_parcela']:.2f}")
-        st.write(f"**Parcelas Restantes:** {resultado_lance['parcelas_restantes']}")
-        st.write(f"**Novo Saldo Devedor:** R$ {resultado_lance['novo_saldo_devedor']:.2f}")
+    # Lance
+    with tab3:
+        lance_valor = st.number_input("Lance ofertado (R$):", min_value=0.0, step=500.0, format="%.2f")
+        tipo = st.radio("Tipo de abatimento:", ["Prazo", "Parcela"], horizontal=True)
+
+        if lance_valor > 0:
+            resultado_lance = consorcio.simular_lance(lance_valor, resultado, tipo.lower())
+            st.success(f"**Simulação ({resultado_lance['tipo']})**")
+            st.metric("Nova Parcela", f"R$ {resultado_lance['nova_parcela']:.2f}")
+            st.metric("Parcelas Restantes", resultado_lance["parcelas_restantes"])
+            st.metric("Novo Saldo Devedor", f"R$ {resultado_lance['novo_saldo_devedor']:.2f}")
