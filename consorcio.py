@@ -1,6 +1,15 @@
 import streamlit as st
 import pandas as pd
 
+# ---------------- Função de conversão ----------------
+def moeda_para_float(valor_str):
+    if not valor_str:
+        return 0.0
+    return float(valor_str.replace("R$", "").replace(".", "").replace(",", ".").strip())
+
+def float_para_moeda(valor):
+    return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 # ---------------- Classe de Consórcio ----------------
 class Consorcio:
     def __init__(self, valor_credito, prazo_meses, taxa_adm_anual, fundo_reserva=0.0, seguro=0.0):
@@ -62,13 +71,18 @@ st.title("📊 Calculadora de Consórcio")
 col1, col2 = st.columns(2)
 
 with col1:
-    valor_credito = st.number_input("Valor da Carta de Crédito (R$):", min_value=1000.0, step=1000.0, format="%.2f")
-    prazo = st.slider("Prazo (meses):", min_value=12, max_value=240, step=12, value=60)
-    taxa = st.number_input("Taxa de Administração (% ao ano):", min_value=0.0, step=0.1, format="%.2f")
+    valor_credito_str = st.text_input("💵 Valor da Carta de Crédito:", value="50.000,00")
+    valor_credito = moeda_para_float(valor_credito_str)
+
+    prazo = st.slider("📅 Prazo (meses):", min_value=12, max_value=240, step=12, value=60)
+
+    taxa = st.number_input("📈 Taxa de Administração (% ao ano):", min_value=0.0, step=0.1, format="%.2f")
 
 with col2:
-    fundo = st.slider("Fundo de Reserva (% do crédito):", min_value=0.0, max_value=10.0, step=0.1, value=0.0)
-    seguro = st.number_input("Seguro Mensal (R$):", min_value=0.0, step=10.0, format="%.2f")
+    fundo = st.slider("🏦 Fundo de Reserva (% do crédito):", min_value=0.0, max_value=10.0, step=0.1, value=0.0)
+
+    seguro_str = st.text_input("🛡️ Seguro Mensal:", value="0,00")
+    seguro = moeda_para_float(seguro_str)
 
 if st.button("📌 Calcular Consórcio"):
     consorcio = Consorcio(valor_credito, prazo, taxa, fundo, seguro)
@@ -81,28 +95,30 @@ if st.button("📌 Calcular Consórcio"):
     with tab1:
         colr1, colr2 = st.columns(2)
         with colr1:
-            st.metric("Parcela Mensal", f"R$ {resultado['parcela']:.2f}")
-            st.metric("Taxa de Administração Total", f"R$ {resultado['taxa_total']:.2f}")
+            st.metric("Parcela Mensal", float_para_moeda(resultado['parcela']))
+            st.metric("Taxa de Administração Total", float_para_moeda(resultado['taxa_total']))
         with colr2:
-            st.metric("Custo Total do Consórcio", f"R$ {resultado['custo_total']:.2f}")
-            st.metric("Fundo de Reserva Total", f"R$ {resultado['fundo_total']:.2f}")
+            st.metric("Custo Total do Consórcio", float_para_moeda(resultado['custo_total']))
+            st.metric("Fundo de Reserva Total", float_para_moeda(resultado['fundo_total']))
 
     # Parcelas
     with tab2:
         df = pd.DataFrame({
             "Nº Parcela": list(range(1, prazo+1)),
-            "Valor (R$)": resultado["parcelas"]
+            "Valor (R$)": [float_para_moeda(p) for p in resultado["parcelas"]]
         })
         st.dataframe(df, use_container_width=True)
 
     # Lance
     with tab3:
-        lance_valor = st.number_input("Lance ofertado (R$):", min_value=0.0, step=500.0, format="%.2f")
+        lance_str = st.text_input("💰 Lance ofertado:", value="0,00")
+        lance_valor = moeda_para_float(lance_str)
+
         tipo = st.radio("Tipo de abatimento:", ["Prazo", "Parcela"], horizontal=True)
 
         if lance_valor > 0:
             resultado_lance = consorcio.simular_lance(lance_valor, resultado, tipo.lower())
             st.success(f"**Simulação ({resultado_lance['tipo']})**")
-            st.metric("Nova Parcela", f"R$ {resultado_lance['nova_parcela']:.2f}")
+            st.metric("Nova Parcela", float_para_moeda(resultado_lance['nova_parcela']))
             st.metric("Parcelas Restantes", resultado_lance["parcelas_restantes"])
-            st.metric("Novo Saldo Devedor", f"R$ {resultado_lance['novo_saldo_devedor']:.2f}")
+            st.metric("Novo Saldo Devedor", float_para_moeda(resultado_lance['novo_saldo_devedor']))
