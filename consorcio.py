@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# ---------------- Função de conversão ----------------
+# ---------------- Função de conversão 1 ----------------
 def moeda_para_float(valor_str):
     if not valor_str:
         return 0.0
