@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-
+#EU
 # ---------------- Função de conversão ----------------
 def moeda_para_float(valor_str):
     if not valor_str:
