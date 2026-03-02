@@ -1,7 +1,12 @@
 import streamlit as st
 import pandas as pd
+<<<<<<< HEAD
 #Novo comentario para teste de commit
 # ---------------- Função de conversão 1 ----------------
+=======
+#EU
+# ---------------- Função de conversão ----------------
+>>>>>>> Novo comentario no cabecalho
 def moeda_para_float(valor_str):
     if not valor_str:
         return 0.0
